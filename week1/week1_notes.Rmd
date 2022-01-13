@@ -1,0 +1,242 @@
+---
+title: "Week 1 - NLP Reading Course Notes"
+date: 2022-01-14
+output: rmarkdown::github_document
+---
+
+This Rmarkdown includes the notes for my course readings in INF2010 - Reading Course: Natural Language Processing. This week's readings include:
+
+- Silge, Julia & David Robinson, 2020, Text Mining with R, Chapters 1-4: https://www.tidytextmining.com.
+- Hovy, Dirk and Shannon L. Spruit, 2016, ‘The Social Impact of Natural Language Processing’, Proceedings of the 54th Annual Meeting of the Association for Computational Linguistics, pp. 591–598,https://aclweb.org/anthology/P16-2096.pdf.
+- Prabhumoye, Shrimai, Elijah Mayfield, and Alan W Black, 2019, ‘Principled Frameworks for Evaluating Ethics in NLP Systems’, Proceedings of the 2019 Workshop on Widening NLP, https://aclweb.org/anthology/W19-3637/.
+
+## Text Mining in R
+
+### Dependencies
+```{r setup, results='hide', message=FALSE}
+library(tidyverse)
+library(tidytext)
+library(janeaustenr)
+library(wordcloud)
+```
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(
+  message = FALSE,
+  warning = FALSE
+)
+```
+
+### Chapter 1 - The tidy text format
+
+**Tidy data** has the structure:
+
+- Each variable is a column
+- Each observation is a row
+- Each type of observational unit is a table
+
+**Tidy Text format** is a table with one-token-per-row. 
+
+A **token** is a meaningful unit of text, most often a word, that we are interested in using for further analysis, and **tokenization** is the process of splitting text into tokens.
+
+A **corpus** typically contains raw string annotated with additional metadata and details.
+
+A **Document-term matrix** is a sparse matrix with one row per document and one columns for each term. The value is typically a word count or tf-idf.
+
+A **tibble** is a modern class of data frame in R. It provides the following advantages over a dataframe:
+
+- has a convenient print method
+- will not convert strings to factors
+- does not use row names
+
+The `unnest_tokens()` function allows us to easily split rows of strings to a tidy format. 
+
+```{r}
+# Create some sample data with text
+my_data <- tibble(
+  line = 1:3, 
+  text = c("Hello world", "HOW are yOu dOiNg?", "what's go!i@ng o-n?")
+)
+
+# Break into tokens
+my_data %>% 
+  unnest_tokens(word, text)
+```
+
+Something interesting I found is that `unnest_tokens` splits on punctuation other than apostrophe. Above you can see that "go!i@ing" was split into three tokens: "go", "i", and "ng". And "what's" was left in tact. 
+
+#### Tidying the works of Jane Austen
+
+```{r}
+# Add line numbers and chapter numbers
+original_books <- austen_books() %>% 
+  group_by(book) %>% 
+  mutate(line_number = row_number(),
+         chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]",
+                                           ignore_case = TRUE)))) %>% 
+  ungroup()
+
+# Extract tokens
+tidy_books <- original_books %>% 
+  unnest_tokens(word, text)
+
+tidy_books
+```
+
+I have used Python before for text analysis and I would structure the DataFrame in one document per row format. The one token per row format provides some noticeable advantages, one being using `anti_join` to remove stop words:
+
+```{r}
+# Remove stop words
+tidy_books %>% 
+  anti_join(stop_words, by="word")
+```
+
+Common english stop words, such as "the" and "and" have been removed.
+
+### Chapter 2 - Sentiment analysis with tidy data
+
+The tidy text package provides three sentiment lexicons:
+
+- `AFINN` from Finn Årup Nielsen,
+  - assigns words with a score that runs between -5 and 5, negative representing negative sentiment and positive representing positive sentiment.
+
+- `bing` from Bing Liu and collaborators
+  - categorizes words in a binary fashion into "positive" and "negative".
+
+- `nrc` from Saif Mohammad and Peter Turney.
+  - categorizes words in binary fashion as "yes" and "no" into categories of positive, negative, anger, anticipation, disgust, fear, joy, sadness, surprise and trust.
+  
+With our data in tidy text format, sentiment analysis can be done with an `inner_join`:
+```{r}
+# Get bing sentiment lexicon
+bing <- get_sentiments("bing")
+
+# Join the sentiments for the tokens in Emma
+emma_sentiments <- tidy_books %>% 
+  filter(book == "Emma") %>% 
+  inner_join(bing, by="word")
+
+emma_sentiments
+```
+
+Positive words for the book Emma:
+```{r}
+emma_sentiments %>% 
+  filter(sentiment == "positive") %>% 
+  count(word, sort = TRUE)
+```
+
+
+Negative words for the book Emma:
+```{r}
+emma_sentiments %>% 
+  filter(sentiment == "negative") %>% 
+  count(word, sort = TRUE)
+```
+
+Plot our word counts
+```{r}
+emma_sentiments %>%
+  count(word, sentiment, sort = TRUE) %>% 
+  group_by(sentiment) %>%
+  slice_max(n, n = 10) %>% 
+  ungroup() %>%
+  mutate(word = reorder(word, n)) %>%    #Sort word on n
+  ggplot(aes(n, word, fill = sentiment)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~sentiment, scales = "free_y") +
+  labs(x = "Contribution to sentiment", y = NULL)
+```
+
+Wordcloud for the book Emma:
+```{r}
+emma_sentiments %>% 
+  count(word) %>% 
+  with(wordcloud(word, n, max.words = 100))
+```
+
+
+### Chapter 3 - Analyzing word and document frequency: tf-idf
+
+**Term frequency (tf)** is the number of times a term occurs in a document.
+
+**Inverse document frequency (idf)** is a measure that decreases for commonly used words and increases for words that are rarely used.
+
+The statistic **tf-idf** is used to measure how important a word is to a document in a corpus of documents.
+
+**Zipf's Law** states that the frequency that a word appears is inversely proportional to its rank.
+
+Lets demonstrate this using Austens books:
+
+```{r}
+# Split austen books into one token per row
+book_words <- austen_books() %>% 
+  unnest_tokens(word, text) %>% 
+  count(book, word, sort = TRUE)
+
+# Create total col
+total_words <- book_words %>% 
+  group_by(book) %>% 
+  summarize(total = sum(n))
+
+# Join total col to book_words
+book_words <- left_join(book_words, total_words, by = "book")
+
+# Create rank and term frequency columns
+freq_by_rank <- book_words %>% 
+  group_by(book) %>% 
+  mutate(rank = row_number(),
+         `term frequency` = n/total) %>% 
+  ungroup()
+
+# Plot rank against term frequency for all Austen books
+freq_by_rank %>% 
+  ggplot(aes(rank, `term frequency`, color = book)) +
+  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) +
+  scale_x_log10() +
+  scale_y_log10()
+
+```
+
+The `bind_tf_idf()` calculates the tf-idf for a tidy dataset. The input dataset needs to have:
+
+- one token per row (tidy)
+- one column containing the tokens/terms
+- one column containing the documents
+- once column containing how many times the token/term occurs in that document
+
+Calculating tf-idf for the austen books:
+
+```{r}
+# Calculate tf-idf for austen books
+book_tf_idf <- book_words %>% 
+  bind_tf_idf(word, book, n)
+
+# Sort by tf-idf and select columns we want
+book_tf_idf %>% 
+  select(book, word, n, tf, idf, tf_idf) %>% 
+  arrange(desc(tf_idf))
+```
+
+```{r}
+book_tf_idf %>%
+  group_by(book) %>%
+  slice_max(tf_idf, n = 15) %>%    # get top 15 tf-idf per book
+  ungroup() %>%
+  ggplot(aes(tf_idf, fct_reorder(word, tf_idf), fill = book)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~book, ncol = 2, scales = "free") +
+  labs(x = "tf-idf", y = NULL)
+```
+
+
+### Chapter 4 - Relationships between words: n-grams and correlations
+
+**N-grams** allow us to tokenize sequence of words to see how often word X is followed by word Y.
+
+
+
+
+
+
+
