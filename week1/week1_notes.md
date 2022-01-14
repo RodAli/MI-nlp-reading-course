@@ -2,9 +2,9 @@ Week 1 - NLP Reading Course Notes
 ================
 2022-01-14
 
-This Rmarkdown includes the notes for my course readings in INF2010 -
-Reading Course: Natural Language Processing. This week’s readings
-include:
+This Rmarkdown includes the notes and reading responses for my course
+readings in INF2010 - Reading Course: Natural Language Processing. This
+week’s readings include:
 
 -   Silge, Julia & David Robinson, 2020, Text Mining with R, Chapters
     1-4: <https://www.tidytextmining.com>.
@@ -26,6 +26,8 @@ library(tidyverse)
 library(tidytext)
 library(janeaustenr)
 library(wordcloud)
+library(igraph)
+library(ggraph)
 ```
 
 ### Chapter 1 - The tidy text format
@@ -87,8 +89,8 @@ my_data %>%
     ## 11     3 o     
     ## 12     3 n
 
-Something interesting I found is that `unnest_tokens`, splits on
-punctuation other than apostrophe. Above you can see that “<go!i@ing>”
+Something interesting I found is that `unnest_tokens` splits on
+punctuation, other than apostrophe. Above you can see that “<go!i@ng>”
 was split into three tokens: “go”, “i”, and “ng”. And “what’s” was left
 in tact.
 
@@ -99,7 +101,7 @@ in tact.
 original_books <- austen_books() %>% 
   group_by(book) %>% 
   mutate(line_number = row_number(),
-         chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]",
+         chapter = cumsum(str_detect(text, regex("^chapter [\\divxlc]", # detect the text "Chapter"
                                            ignore_case = TRUE)))) %>% 
   ungroup()
 
@@ -199,9 +201,10 @@ emma_sentiments
     ## 10 Emma           21       1 indulgent    positive 
     ## # … with 11,956 more rows
 
-Positive words for the book Emma:
+Most frequent positive sentiment words for the book Emma:
 
 ``` r
+# Get count of positive sentiment words
 emma_sentiments %>% 
   filter(sentiment == "positive") %>% 
   count(word, sort = TRUE)
@@ -222,9 +225,10 @@ emma_sentiments %>%
     ## 10 right       92
     ## # … with 658 more rows
 
-Negative words for the book Emma:
+Most frequent negative sentiment words for the book Emma:
 
 ``` r
+# Get count of negative sentiment words
 emma_sentiments %>% 
   filter(sentiment == "negative") %>% 
   count(word, sort = TRUE)
@@ -248,6 +252,7 @@ emma_sentiments %>%
 Plot our word counts
 
 ``` r
+# Plot sentiment word counts on bar plot
 emma_sentiments %>%
   count(word, sentiment, sort = TRUE) %>% 
   group_by(sentiment) %>%
@@ -262,12 +267,14 @@ emma_sentiments %>%
 
 ![](week1_notes_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
-Wordcloud for the book Emma:
+Wordcloud for positive sentiments the book Emma:
 
 ``` r
-emma_sentiments %>% 
+# Create wordcloud for positive sentiments
+emma_sentiments %>%
+  filter(sentiment == "positive") %>% 
   count(word) %>% 
-  with(wordcloud(word, n, max.words = 100))
+  with(wordcloud(word, n, max.words = 100)) 
 ```
 
 ![](week1_notes_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
@@ -312,7 +319,7 @@ freq_by_rank <- book_words %>%
 # Plot rank against term frequency for all Austen books
 freq_by_rank %>% 
   ggplot(aes(rank, `term frequency`, color = book)) +
-  geom_line(size = 1.1, alpha = 0.8, show.legend = FALSE) +
+  geom_line(size = 1.1, alpha = 0.8) +
   scale_x_log10() +
   scale_y_log10()
 ```
@@ -325,7 +332,7 @@ dataset needs to have:
 -   one token per row (tidy)
 -   one column containing the tokens/terms
 -   one column containing the documents
--   once column containing how many times the token/term occurs in that
+-   one column containing how many times the token/term occurs in that
     document
 
 Calculating tf-idf for the austen books:
@@ -356,7 +363,12 @@ book_tf_idf %>%
     ## 10 Persuasion          wentworth   191 0.00228  1.79 0.00409
     ## # … with 40,369 more rows
 
+We see that the values with the highest tf-idf are names of the
+characters in the novel. This makes logical sense given how tf-idf
+works.
+
 ``` r
+# Create a bar plot to show the greatest tf-idf tokens per book
 book_tf_idf %>%
   group_by(book) %>%
   slice_max(tf_idf, n = 15) %>%    # get top 15 tf-idf per book
@@ -368,3 +380,146 @@ book_tf_idf %>%
 ```
 
 ![](week1_notes_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+
+### Chapter 4 - Relationships between words: n-grams and correlations
+
+**N-grams** allow us to tokenize sequence of words to see how often word
+X is followed by word Y.
+
+An advantage of n-grams over a “bag-of-words” approach is that the order
+of words provides useful information.
+
+-   When n = 1, we call the tokens “unigrams”
+-   When n = 2, we call the tokens “bigrams”
+-   When n = 3, we call the tokens “trigrams”
+
+To create n-grams, we can use `unnest_tokens()` with the `token`
+parameter set to `"ngrams"` and the `n` parameter set to the number of
+words in our sequence. For example:
+`unnest_tokens(..., token = "ngrams", n = 2)`.
+
+Once we have separated our text into n-grams, we can split the n-gram’s
+words into their own columns using `separate()`.
+
+Inversely we can join words in their own columns back into one column
+using `unite()`.
+
+``` r
+# Create bigrams from all of Jane Austens novels
+austen_bigrams <- austen_books() %>% 
+  unnest_tokens(bigram, text, token = "ngrams", n = 2) %>% 
+  separate(bigram, c("word1", "word2"), sep = " ") %>%      
+  anti_join(stop_words, by = c("word1" = "word")) %>%  # Remove stop words
+  anti_join(stop_words, by = c("word2" = "word")) %>%  # Remove stop words
+  filter(!is.na(word1) & !is.na(word2)) %>%   # Remove NA
+  count(book, word1, word2, sort = TRUE)  # Count bigrams per book
+
+austen_bigrams
+```
+
+    ## # A tibble: 31,391 × 4
+    ##    book                word1   word2         n
+    ##    <fct>               <chr>   <chr>     <int>
+    ##  1 Mansfield Park      sir     thomas      266
+    ##  2 Mansfield Park      miss    crawford    196
+    ##  3 Emma                miss    woodhouse   143
+    ##  4 Persuasion          captain wentworth   143
+    ##  5 Emma                frank   churchill   114
+    ##  6 Persuasion          lady    russell     110
+    ##  7 Persuasion          sir     walter      108
+    ##  8 Mansfield Park      lady    bertram     101
+    ##  9 Emma                miss    fairfax      98
+    ## 10 Sense & Sensibility colonel brandon      96
+    ## # … with 31,381 more rows
+
+Again we see names as the the most frequent for bigrams. Though this
+time we capture names with titles, such as “sir”, “miss” and “captain”.
+
+``` r
+# Set random seed
+set.seed(1234)
+
+# Create graph from bigrams
+austen_bigram_graph <- austen_bigrams %>% 
+  filter(n > 20) %>% 
+  select(word1, word2, n) %>% 
+  graph_from_data_frame()
+
+# Plot graph
+austen_bigram_graph %>% 
+  ggraph(layout = "fr") +
+  geom_edge_link(aes(edge_alpha = n), 
+                 show.legend = FALSE,
+                 arrow = grid::arrow(type = "closed", length = unit(.07, "inches")), 
+                 end_cap = circle(.07, 'inches')) +
+  geom_node_point(color = "grey", size = 4) +
+  geom_node_text(aes(label = name), vjust = 1, hjust = 1) +
+  theme_void()
+```
+
+<img src="week1_notes_files/figure-gfm/unnamed-chunk-14-1.png" width="100%" />
+
+## The Social Impact of Natural Language Processing
+
+### Reading Response
+
+In *The Social Impact of Natural Language Processing*, Hovy and Shannon
+aim to start a discussion on the ethics of Natural Language Processing
+research.
+
+They identify that there is a gap in the research on the ethics of NLP
+methods. They compare data science research (which includes NLP
+research) to the medical sciences and find that, unlike the medical
+sciences, data science research does not have an ethical standard to
+guide experiments. They hypothesize the reason to be that because data
+science research does not deal with human subjects directly, the need
+for an ethical standard was never established.
+
+However, Hovy and Shannon argue that NLP research is changing and the
+social impacts are being felt by the public. The gap between text and
+author is closing, and the situation is changing due to the increase in
+the study of social media data. If NLP researchers are not aware of the
+potential downfalls of NLP research, there can be harmful social
+impacts.
+
+Hovy and Shannon identify three potential harmful impacts of NLP
+research: *exclusion*, *overgeneralization*, and the *problem of
+exposure*. They mention that text data contains latent demographic bias
+within it, and training models on text data creates the risk of
+exclusion and demographic misrepresentation. Even if we avoid these
+potential pitfalls, NLP models can have unintended consequences if used
+for a different purpose in which they were built. They give the example
+that “NLP techniques can be used to detect fake reviews, but also to
+generate them in the first place.”
+
+I found it surprising that there is not much discourse on the ethics of
+NLP methods given the widespread usage of social media, online news, and
+blogs. If models are being trained on text data that is primarily
+generated from a certain population, researchers should be cautious of
+extrapolating insights to other populations. Training models on data
+from diverse groups, and languages will assist in creating more
+equitable systems.
+
+## Principled Frameworks for Evaluating Ethics in NLP Systems
+
+### Reading Response
+
+The paper *Principled Frameworks for Evaluating Ethics in NLP Systems*,
+by Prabhumoye et al. explores the use of ethical frameworks in NLP
+research. They argue that machine learning researchers should not be
+“evaluating ourselves, on metrics of our own choosing”, but rather
+drawing from established frameworks of ethics.
+
+Prabhumoye et al. explore two ethical frameworks from philosophy, the
+generalization principle, and the utilitarian principle. In one example,
+where demographic information (age and gender) is needed in a
+classification task, sentiment, and topic modelling, the two ethical
+frameworks differ in terms of the correct action to take. The
+utilitarian framework will use demographic information to maximize its
+own utility and accuracy, while the generalization principle will not
+use demographic information because the classification task is aught to
+be agnostic of such demographic information. There are times that we may
+have to sacrifice model accuracy to remove biases or unethical patterns
+that our models may pick up on. Prabhumoye et al. stress the importance
+of adopting a framework of ethics and viewing machine learning research
+holistically as opposed to simply trying to maximize accuracy metrics.
