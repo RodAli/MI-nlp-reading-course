@@ -401,7 +401,7 @@ Markov model tagging can be extended to **bigram tagging**, **trigram tagging** 
 
 Markov Models work well when we have a large tagged training set. If we have no training data we can use **Hidden Markov Model Tagging**.
 
-**Transformation-based tagging** can explort a wider range of lexical and syntactic regularities. As input data, we need a tagged corpus and a dictionary. We first tag each word in the training corpus with its most frequent tag – that is what we need the dictionary for. The learning algorithm then constructs a ranked list of transformations that transforms the initial tagging into a tagging that is close to correct. This ranked list can be used to tag new text, by again initially choosing each word’s most frequent tag, and then applying the transformations.
+**Transformation-based tagging** can explore a wider range of lexical and syntactic regularities. As input data, we need a tagged corpus and a dictionary. We first tag each word in the training corpus with its most frequent tag – that is what we need the dictionary for. The learning algorithm then constructs a ranked list of transformations that transforms the initial tagging into a tagging that is close to correct. This ranked list can be used to tag new text, by again initially choosing each word’s most frequent tag, and then applying the transformations.
 
 The great advantage of transformation-based tagging is that it can condition tagging decisions on a richer set of events than the probabilistic models we looked at earlier.
 
@@ -411,5 +411,26 @@ Other tagging models include:
 - probabilistic models
 - automata
 
+## Social Biases in NLP Models as Barriers for Persons with Disabilities
 
+In Hutchinson et al.’s Social Biases in NLP Models as Barriers for Persons with Disabilities, they explore the prevalence of harmful social biases about persons with disabilities in modern NLP techniques. They look at the biases in text classification models, in language representations and in the data that is used to train these models. They argue that left unchecked, NLP models can propagate harmful stereotypes about persons with disabilities and that more action should be made to prevent this from happening. 
+
+Hutchinson et al. collected 56 expressions referring to people with disabilities and categorize them into recommended or non-recommended by consulting three US-based organizations. For example, a recommended expression referring to someone with mental illness would be a person with a mental health disability, while a non-recommended expression would be an insane person. 
+
+Using this dataset of expressions, they evaluated a Reddit sub-corpus using sentiment analysis and a toxicity model. They found that phrases referring to those with a disability were more likely to be associated with toxicity. Similarly, for sentiments they found an association between disability and negative sentiments. 
+
+Hutchinson et al. furthermore explored biases in language representations. Specifically, they looked at the widely used bidirectional Transformer (BERT) and how it represents persons with disabilities. They found BERT “associates words with more negative sentiment with phrases referencing persons with disabilities.”
+
+In this work, Hutchinson et al., have shown evidence of harmful language representations of persons with disabilities. It is shown that if the language and corpora contain harmful biases and stereotypes NLP models will “learn” this language and further propagate it. Thus, it is important to be conscious of the text we train our models on, and the associations that are models learn. 
+
+*Hutchinson, Ben, Vinodkumar Prabhakaran, Emily Denton, Kellie Webster, Yu Zhong, and Stephen Denuyl, 2020, ‘Social Biases in NLP Models as Barriers for Persons with Disabilities’, arXiv, https://arxiv.org/abs/2005.00813.*
+
+
+## CSI: A Hybrid Deep Model for Fake News Detection
+
+In Ruchansky et al.’s CSI: A Hybrid Deep Model for Fake News Detection, they develop a machine learning model named CSI, with the objective of classifying fake news and identifying suspicious users that propagate fake news. CSI, which stands for Capture, Score and Integrate combines various techniques used in previous fake news detection work into a hybrid model. Previous work looked at one of the three aspects of online news. The first being the text, which includes the headline, and content of the article. Second, the response of the article, which include comments, likes, shares, and reactions. Keep in mind that the response varies depending on the platform (Facebook has reactions, blogs may only have comments). Third, is the source of the article, who it was written by. Ruchansky et al. develop a Recurrent Neural Network that is trained from all three aspects of online news. Ruchansky et al. trained this model using data from Twitter and Weibo. They found that their CSI model, accounting for all three aspects of fake news can accurately predict fake news content. 
+
+Ruchansky et al.’s work builds off previous work by creating a hybrid model that accounts for text, response and the source. One limitation of this work, that the authors have identified, is that fake news detection is a technically challenging problem because it is difficult to determine what makes an article fake or not. Determining whether an article is fake is a problem for human subjects as well. Majority of human subjects are not able to tell when an article is fake, so crowdsourcing cannot be used to construct reliable datasets. To determine this, rigorous fact checking, and specialists are needed to determine if information presented in an article is credible. Complexity arises when truths are mixed in facts that are partially true. Overall, this presents a difficulty in evaluating fake news detection models and creating data sets to train these models. 
+
+*Natali Ruchansky, Sungyong Seo, and Yan Liu. 2017. CSI: A Hybrid Deep Model for Fake News Detection. In Proceedings of the 2017 ACM on Conference on Information and Knowledge Management (CIKM '17). Association for Computing Machinery, New York, NY, USA, 797–806. DOI:https://doi-org.myaccess.library.utoronto.ca/10.1145/3132847.3132877.*
 
