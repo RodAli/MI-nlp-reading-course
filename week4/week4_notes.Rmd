@@ -1,0 +1,145 @@
+---
+title: "Week 4 - NLP Reading Course Notes"
+date: 2022-02-04
+output: github_document
+---
+
+This Rmarkdown includes the notes and reading responses for my course readings in **INF2010 - Reading Course: Natural Language Processing**. 
+
+This week's readings include:
+
+- Hvitfeldt, Emil & Julia Silge, 2020, Supervised Machine Learning for Text Analysis in R, Chapters 1-3, https://smltar.com.
+- Jurafsky, Dan, and James H. Martin, 2020, Speech and Language Processing, 3rd ed., Chapter 3, https://web.stanford.edu/~jurafsky/slp3/.
+- Solaiman, Irene, Miles Brundage, Jack Clark, Amanda Askell, ArielHerbert-Voss, Jeff Wu, Alec Radford, Gretchen Krueger, Jong Wook Kim, SarahKreps, Miles McCain, Alex Newhouse, Jason Blazakis, Kris McGuffie, Jasmine Wang, 2019, ‘Release Strategies and the Social Impacts of Language Models’,arXiv, https://arxiv.org/abs/1908.09203.
+- Perez-Rosas V, Kleinberg B, Lefevre A, Mihalcea R, 2017, ‘Automatic detection of fake news’, arXiv, https://arxiv.org/abs/1708.07104.
+
+## Supervised Machine Learning for Text Analysis in R
+
+### Chapter 1 - Language and Modeling
+
+**Linguistics subfields**
+
+- Phonetics
+  - Sounds that people use in language
+- Phonology
+  - Systems of sounds in particular languages
+- Morphology
+  - How words are formed
+- Syntax
+  - How sentences are formed from words
+- Semantics
+  - What sentences mean
+- Pragmatics
+  - How language is used in context
+
+Natural Language Processing often builds features from morphological and syntactic elements of language.
+
+Notes:
+
+- Language varies. Be conscious and transparent of the language your models are trained on, and their generalizability.
+- Language can have multiple dialects within it (ex. African American Vernacular English)
+- Language constantly changes over time
+
+"This is why we are somewhat skeptical of AI products such as sentiment analysis APIs, not because they never work well, but because they work well only when the text you need to predict from is a good match to the text such a product was trained on."
+
+### Chapter 2 - Tokenization
+
+Types of tokens:
+
+- characters
+- words
+- sentences
+- lines
+- paragraphs
+- n-grams
+
+### Chapter 3 - Stop Words
+
+**Stop words** are very common and typically don't add much to the meaning of a text but instead ensure the structure of sentence is sound.
+
+Stop words can generally be categorized into three groups:
+
+1. global stop words
+  - are words that are almost low in meaning in a given language
+  - examples include "of" and "and"
+2. subject stop words
+  - are words that are uninformative for a given subject area
+  - subjects can include finance, medicine, health code violations and job listings
+  - An example of stop words for the subject of finance can be "bath", "bedroom", which are not relevant to finance
+3. document stop words
+  - are words that do not provide any or much information for a given document
+  - these are difficult to classify and it is not obvious how you can incorporate this in an analysis
+  
+Three stop word lists:
+
+- SMART (System for the Mechanical Analysis and Retrieval of Text)
+- English Snowball stop word list
+- Stopwords ISO collection
+
+```{r, eval=FALSE}
+# Import these three stop word lists
+library(stopwords)
+smart <- stopwords(source = "smart")
+snowball <- stopwords(source = "snowball")
+iso <- stopwords(source = "stopwords-iso")
+```
+
+Two methods to remove stopwords:
+
+```{r, eval=FALSE}
+# Remove stop words using filter()
+my_data %>% 
+  filter(!(word %in% smart))
+
+# Remove stop words using anti_join()
+my_data %>% 
+  anti_join(smart, by = "word")
+```
+
+## Speech and Language Processing
+
+### Chapter 3 - N-Gram Language Models
+
+The intuition of the n-gram model is that instead of computing the probability of a word given its entire history, we can **approximate** the history by just the last few words.
+
+The assumption that the probability of a word depends only on the previous word is Markov called a Markov assumption.
+
+Bi-gram looks at 1 word in the past, tri-gram looks at 2 words in the past, n-gram looks at n - 1 words in the past.
+
+Relative frequency is the division of the observed frequency of a particular sequence by the observed frequency of a prefix.
+
+The **perplexity** of a test set according to a language model is the geometric mean of the inverse test set probability computed by the model.
+
+## Release Strategies and the Social Impacts of Language Models – Solaiman et al.
+
+### Reading Response
+
+In *Release Strategies and the Social Impacts of Language Models*, Solaiman et al. assess the social impacts of the GPT-2 language model and provide areas for future research. GPT-2 is a language model that was developed by OpenAI and released in February 2019. GPT-2 has several functions, some of which include:
+
+-	Generating text
+-	Creating task-specific systems (sentiment classifiers, translation systems)
+-	Discriminating between synthetic text generated by a language model
+
+One concern for societal wellbeing is the extent to which humans and machines can detect outputs of the GPT-2. They found that humans can be easily deceived by text generated by GPT-2 and that this would only become increasingly more difficult as these models become more sophisticated. Partner researchers found “that cherry-picked fake news samples from the 355 million parameter version of GPT-2 were considered “credible” about 66% of the time”. 
+
+This creates an identity problem with regards to whether a human or a machine-generated text content. Malicious adversaries can sway public opinion by generating mass amounts of misleading articles and disseminating them online. It would be difficult to tell if many users are generating this content or if it is a single adversary. 
+
+To protect against this, GPT-2 can be used to assist humans in detecting content generated by itself. GPT-2 can classify whether a piece of text is generated by a machine or a human being. This creates a bit of competition between those detecting GPT-2 content and adversaries using GPT-2 to generate unwanted text content. Solaiman et al. say that “Methods for statistical detection and generation are varied and may evolve further in a cat and mouse game.” Furthermore they “acknowledge this model’s dual-use nature; its release intends to aid synthetic text detection research but can allow adversaries with access to better evade detection.” This is a similar case in system security, when there are developments in exposing security flaws, this is followed by improvements in security to patch up those flaws. Likewise, when there are developments in security, this provides insights and perspectives to hackers on how to compromise systems. 
+
+
+## Automatic Fake News Detection – Perez-Rosas et al.
+
+### Reading response
+
+In *Automatic Detection of Fake News*, Perez-Rosas et al. develop two novel datasets for the use of fake news classification. Furthermore, they trained several models on these datasets to detect fake news.
+
+They used crowdsourcing to construct fake news articles on one of the datasets. They collected articles from well-known news sites (ABCNews, CNN, etc.) and gave these articles to Amazon Mechanical Turk workers to “generate a fake version”. The workers were asked to try to maintain the same “journalistic style” such that writing style was controlled for. The final dataset contained 240 fake news articles. 
+
+When developing these two datasets, Perez-Rosas et al. refer to nine requirements of building a fake news dataset proposed by (Rubin et al., 2016). The authors suggest that a fake news corpus should “(1) include both fake and real news items, (2) contain text-only news items, (3) have a verifiable ground-truth, (4) be homogeneous in length and (5) writing style, (6) contain news from a predefined time frame, (7) be delivered in the same manner and for the same purpose (e.g. humour, breaking news) for fake and real cases, (8) be made publicly available, and (9) should take language and cultural differences into account.” 
+
+I found a challenge in this work regarding the third point: “have a verifiable ground-truth.” Taking news articles and asking workers to manipulate the truth in the articles presents several challenges. Perez-Rosas et al. address this issue by stating “ground-truth remains challenging since we cannot verify with absolute certainty whether all the content of real news items is in fact true.” I agree with this point, as NLP models are not able to “fact-check” the articles that it is being trained on. Rather NLP models can learn “signifiers” from the text that are associated with fake news. 
+
+Further on in the article, Perez-Roses et al. train several classifiers to detect fake news across several domains – including technology, education, and business. They achieve some impressive results, reaching high accuracies in several domains. “The technology and politics domains, moreover, are classified both with a high accuracy of 0.91” the authors conclude. My question is what is the NLP model learning to achieve this high accuracy? If the model is not able to verify ground truth, what are the signifiers that are used to detect whether an article is fake or not? This would be an interesting future line of research to investigate. 
+
+
+*Victoria L. Rubin, Yimin Chen, and Niall J. Conroy. 2015. Deception detection for news: Three types of fakes. Proceedings of the Association for Information Science and Technology 52(1):1-4. https://doi.org/10.1002/pra2.2015.145052010083.*
